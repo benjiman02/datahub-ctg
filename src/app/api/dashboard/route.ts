@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { subDays, format, startOfDay, endOfDay } from 'date-fns'
+import { generateDashboardData } from '@/lib/data/mock-data'
 
 // Force dynamic to prevent caching
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || 'overview'
     const brandId = searchParams.get('brandId')
     const platformId = searchParams.get('platformId')
-    const timeRange = searchParams.get('timeRange') || 'last30days'
+    const timeRange = (searchParams.get('timeRange') || 'last30days') as any
 
     const days = timeRange === 'last7days' ? 7 : timeRange === 'last30days' ? 30 : timeRange === 'last90days' ? 90 : 30
     const startDate = startOfDay(subDays(new Date(), days))
@@ -28,20 +29,28 @@ export async function GET(request: NextRequest) {
 
     let data: any
 
-    switch (type) {
-      case 'brands':
-        data = await getBrandsData()
-        break
-      case 'platforms':
-        data = await getPlatformsData()
-        break
-      case 'metrics':
-        data = await getMetricsData(startDate, endDate, days, brandId, platformId)
-        break
-      case 'overview':
-      default:
-        data = await getOverviewData(startDate, endDate, days, brandId, platformId)
-        break
+    try {
+      // Try to fetch from database first
+      switch (type) {
+        case 'brands':
+          data = await getBrandsData()
+          break
+        case 'platforms':
+          data = await getPlatformsData()
+          break
+        case 'metrics':
+          data = await getMetricsData(startDate, endDate, days, brandId, platformId)
+          break
+        case 'overview':
+        default:
+          data = await getOverviewData(startDate, endDate, days, brandId, platformId)
+          break
+      }
+    } catch (dbError) {
+      console.error('Database fetch failed, falling back to mock data:', dbError)
+      // Fallback to mock data if database fails
+      const mockData = generateDashboardData(timeRange, brandId)
+      data = mockData
     }
 
     const response = NextResponse.json({
@@ -51,6 +60,7 @@ export async function GET(request: NextRequest) {
         timestamp: new Date().toISOString(),
         filters: { brandId, platformId, timeRange },
         user: { id: session.user.id, role: session.user.role },
+        source: data === null ? 'error' : (data.isMock ? 'mock' : 'database')
       },
     })
     

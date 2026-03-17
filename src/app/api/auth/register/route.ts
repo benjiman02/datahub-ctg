@@ -30,13 +30,21 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
+    // Determine role based on email for mock demo
+    let role: 'SUPER_ADMIN' | 'MANAGER' | 'VIEWER' = 'VIEWER'
+    if (email === 'admin@ctg.com') {
+      role = 'SUPER_ADMIN'
+    } else if (email === 'manager@ctg.com') {
+      role = 'MANAGER'
+    }
+
     // Create user
     const user = await db.user.create({
       data: {
         email,
         name,
         password: hashedPassword,
-        role: 'VIEWER', // Default role
+        role,
       },
     })
 

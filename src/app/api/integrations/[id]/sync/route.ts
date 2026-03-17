@@ -6,7 +6,7 @@ import { db } from '@/lib/db'
 // POST - Trigger manual sync for an integration
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -19,7 +19,7 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { id } = await params
+    const { id } = params
 
     // Check if integration exists
     const integration = await db.integration.findUnique({
@@ -124,7 +124,7 @@ export async function POST(
 // GET - Get sync status for an integration
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -133,7 +133,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = await params
+    const { id } = params
 
     const integration = await db.integration.findUnique({
       where: { id },

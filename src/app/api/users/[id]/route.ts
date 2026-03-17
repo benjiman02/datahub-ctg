@@ -7,7 +7,7 @@ import { hash } from 'bcryptjs'
 // GET - Get single user details
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -16,7 +16,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = await params
+    const { id } = params
 
     // Only admins or the user themselves can view details
     if (!['SUPER_ADMIN', 'ADMIN'].includes(session.user.role) && session.user.id !== id) {
@@ -76,7 +76,7 @@ export async function GET(
 // PUT - Update user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -85,7 +85,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = await params
+    const { id } = params
 
     // Only admins can update other users, or user can update themselves (limited)
     const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(session.user.role)
@@ -178,7 +178,7 @@ export async function PUT(
 // DELETE - Delete user (soft delete by setting isActive = false)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -187,7 +187,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = await params
+    const { id } = params
 
     // Only admins can delete users
     if (!['SUPER_ADMIN', 'ADMIN'].includes(session.user.role)) {

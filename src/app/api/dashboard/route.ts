@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { subDays, format, startOfDay, endOfDay } from 'date-fns'
-import { generateDashboardData } from '@/lib/data/mock-data'
+import { generateDashboardData, generateTodayMetrics } from '@/lib/data/mock-data'
 
 // Force dynamic to prevent caching
 export const dynamic = 'force-dynamic'
@@ -50,7 +50,77 @@ export async function GET(request: NextRequest) {
       console.error('Database fetch failed, falling back to mock data:', dbError)
       // Fallback to mock data if database fails
       const mockData = generateDashboardData(timeRange, brandId)
-      data = mockData
+      const todayMetrics = generateTodayMetrics(brandId)
+      
+      // Map mock data to the format expected by ExecutiveDashboard
+      data = {
+        today: {
+          revenue: todayMetrics.revenue.today,
+          orders: todayMetrics.orders.today,
+          profit: todayMetrics.profit.today,
+          adSpend: todayMetrics.adSpend.today,
+          customers: Math.round(todayMetrics.orders.today * 0.7),
+          avgOrderValue: todayMetrics.orders.avgOrderValue,
+        },
+        metrics: {
+          summary: {
+            revenue: mockData.revenue.totalRevenue,
+            orders: mockData.sales.totalOrders,
+            profit: mockData.profit.netProfit,
+            adSpend: mockData.marketing.adSpend,
+            avgOrderValue: mockData.sales.averageOrderValue,
+            grossMargin: mockData.profit.grossMargin,
+            roas: mockData.marketing.roas,
+          },
+          counts: {
+            brands: 27,
+            platforms: 6,
+            products: 1450,
+          },
+          daily: mockData.revenueTrend.map(d => ({
+            date: d.date,
+            revenue: d.revenue,
+            orders: Math.round(d.revenue / 95),
+            profit: d.profit,
+            adSpend: Math.round(d.revenue * 0.14),
+            customers: Math.round(d.revenue / 95 * 0.7),
+          })),
+        },
+        brands: mockData.topBrands.map((b, i) => ({
+          id: `brand-${i+1}`,
+          name: b.name,
+          slug: b.name.toLowerCase().replace(/\s+/g, '-'),
+          color: '#3b82f6',
+          metrics: {
+            revenue: b.revenue,
+            orders: Math.round(b.revenue / 95),
+            growth: b.growth,
+          }
+        })),
+        platforms: mockData.platformPerformance.map((p, i) => ({
+          id: `platform-${i+1}`,
+          name: p.platform,
+          type: p.platform.toUpperCase().replace(/\s+/g, '_'),
+          metrics: {
+            revenue: p.revenue,
+            orders: p.orders,
+            growth: 12.5,
+          }
+        })),
+        recentOrders: [
+          { id: 'ORD-7721', brand: 'GlowSkin', platform: 'Shopee', amount: 145, status: 'completed', time: '2 min ago' },
+          { id: 'ORD-7720', brand: 'VitaWell', platform: 'Lazada', amount: 89, status: 'completed', time: '5 min ago' },
+          { id: 'ORD-7719', brand: 'PureBeauty', platform: 'Shopify', amount: 210, status: 'processing', time: '12 min ago' },
+          { id: 'ORD-7718', brand: 'ZenLife', platform: 'TikTok Shop', amount: 65, status: 'completed', time: '18 min ago' },
+          { id: 'ORD-7717', brand: 'GlowSkin', platform: 'Shopee', amount: 120, status: 'completed', time: '25 min ago' },
+        ],
+        topProducts: [],
+        alerts: [
+          { id: '1', type: 'success', title: 'Data Sync Complete', message: 'Synced 1,240 orders from Shopee', time: '5 min ago' },
+          { id: '2', type: 'warning', title: 'Low Stock Alert', message: 'GlowSkin Serum is below safety stock', time: '12 min ago' },
+        ],
+        isMock: true
+      }
     }
 
     const response = NextResponse.json({
@@ -60,7 +130,7 @@ export async function GET(request: NextRequest) {
         timestamp: new Date().toISOString(),
         filters: { brandId, platformId, timeRange },
         user: { id: session.user.id, role: session.user.role },
-        source: data === null ? 'error' : (data.isMock ? 'mock' : 'database')
+        source: data?.isMock ? 'mock' : 'database'
       },
     })
     

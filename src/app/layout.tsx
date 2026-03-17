@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { Analytics } from "@vercel/analytics/next";
 
 // Force dynamic rendering to prevent static caching
 export const dynamic = 'force-dynamic';
@@ -54,6 +55,7 @@ export default function RootLayout({
             <Toaster position="top-right" />
           </ThemeProvider>
         </SessionProvider>
+        <Analytics />
       </body>
     </html>
   );
